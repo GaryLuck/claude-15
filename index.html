@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>15 Puzzle</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #eee;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 1.5rem;
+      color: #e2c97e;
+    }
+
+    #info {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+
+    #info span { opacity: 0.8; }
+    #info strong { color: #e2c97e; font-size: 1.2rem; }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding: 10px;
+      background: #16213e;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      width: min(80vw, 400px);
+      height: min(80vw, 400px);
+    }
+
+    .tile {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: clamp(1.2rem, 4vw, 1.8rem);
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s ease, background 0.2s ease;
+      background: #0f3460;
+      color: #e2c97e;
+      border: 2px solid #1a4a8a;
+    }
+
+    .tile:hover { background: #1a4a8a; transform: scale(0.97); }
+    .tile:active { transform: scale(0.93); }
+    .tile.empty { background: transparent; border: 2px dashed #2a3a5e; cursor: default; pointer-events: none; }
+    .tile.empty:hover { background: transparent; transform: none; }
+
+    .tile.solved {
+      background: #0d6b3e;
+      border-color: #1a9a5e;
+      color: #7effd4;
+    }
+
+    #controls {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+
+    button {
+      padding: 0.6rem 1.6rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    #btn-shuffle {
+      background: #e2c97e;
+      color: #1a1a2e;
+    }
+    #btn-shuffle:hover { background: #f0db8a; }
+    #btn-shuffle:active { transform: scale(0.96); }
+
+    #btn-solve {
+      background: #2a3a5e;
+      color: #aac4ff;
+      border: 1px solid #3a5080;
+    }
+    #btn-solve:hover { background: #3a4a70; }
+    #btn-solve:active { transform: scale(0.96); }
+
+    #win-banner {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    #win-banner.show { display: flex; }
+
+    #win-card {
+      background: #16213e;
+      border: 2px solid #e2c97e;
+      border-radius: 16px;
+      padding: 2.5rem 3rem;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    }
+
+    #win-card h2 { font-size: 2rem; color: #e2c97e; margin-bottom: 0.5rem; }
+    #win-card p  { opacity: 0.8; margin-bottom: 1.5rem; }
+
+    #win-card button {
+      background: #e2c97e;
+      color: #1a1a2e;
+      padding: 0.7rem 2rem;
+      font-size: 1rem;
+    }
+    #win-card button:hover { background: #f0db8a; }
+  </style>
+</head>
+<body>
+
+<h1>15 Puzzle</h1>
+
+<div id="info">
+  <div><span>Moves: </span><strong id="moves">0</strong></div>
+  <div><span>Time: </span><strong id="timer">0:00</strong></div>
+</div>
+
+<div id="board"></div>
+
+<div id="controls">
+  <button id="btn-shuffle">Shuffle</button>
+  <button id="btn-solve">Reset</button>
+</div>
+
+<div id="win-banner">
+  <div id="win-card">
+    <h2>Solved!</h2>
+    <p id="win-msg"></p>
+    <button onclick="newGame()">Play Again</button>
+  </div>
+</div>
+
+<script>
+  const GRID = 4;
+  const SIZE = GRID * GRID;
+  let tiles = [];      // current board state (0 = empty)
+  let moves = 0;
+  let timerInterval = null;
+  let startTime = null;
+  let running = false;
+
+  const boardEl  = document.getElementById('board');
+  const movesEl  = document.getElementById('moves');
+  const timerEl  = document.getElementById('timer');
+  const bannerEl = document.getElementById('win-banner');
+  const winMsg   = document.getElementById('win-msg');
+
+  function goalState() {
+    return [...Array(SIZE).keys()].map(i => (i + 1) % SIZE);
+    // [1,2,...,15,0]
+  }
+
+  function isSolved() {
+    const goal = goalState();
+    return tiles.every((v, i) => v === goal[i]);
+  }
+
+  // Count inversions to check solvability
+  function isSolvable(arr) {
+    const flat = arr.filter(v => v !== 0);
+    let inv = 0;
+    for (let i = 0; i < flat.length; i++)
+      for (let j = i + 1; j < flat.length; j++)
+        if (flat[i] > flat[j]) inv++;
+    const emptyRow = Math.floor(arr.indexOf(0) / GRID); // 0-indexed from top
+    const emptyFromBottom = GRID - emptyRow;
+    if (GRID % 2 === 1) return inv % 2 === 0;
+    return (emptyFromBottom % 2 === 1) ? (inv % 2 === 0) : (inv % 2 === 1);
+  }
+
+  function shuffle() {
+    do {
+      tiles = [...Array(SIZE).keys()].map(i => (i + 1) % SIZE);
+      for (let i = SIZE - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+      }
+    } while (!isSolvable(tiles) || isSolved());
+  }
+
+  function newGame() {
+    bannerEl.classList.remove('show');
+    shuffle();
+    moves = 0;
+    movesEl.textContent = '0';
+    clearInterval(timerInterval);
+    startTime = null;
+    running = false;
+    timerEl.textContent = '0:00';
+    render();
+  }
+
+  function startTimer() {
+    if (running) return;
+    running = true;
+    startTime = Date.now();
+    timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    }, 500);
+  }
+
+  function clickTile(idx) {
+    const emptyIdx = tiles.indexOf(0);
+    const row = Math.floor(idx / GRID);
+    const col = idx % GRID;
+    const eRow = Math.floor(emptyIdx / GRID);
+    const eCol = emptyIdx % GRID;
+
+    const adjacent =
+      (row === eRow && Math.abs(col - eCol) === 1) ||
+      (col === eCol && Math.abs(row - eRow) === 1);
+
+    if (!adjacent) return;
+
+    startTimer();
+    [tiles[idx], tiles[emptyIdx]] = [tiles[emptyIdx], tiles[idx]];
+    moves++;
+    movesEl.textContent = moves;
+    render();
+
+    if (isSolved()) {
+      clearInterval(timerInterval);
+      running = false;
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      winMsg.textContent = `${moves} moves in ${m}:${s.toString().padStart(2, '0')}`;
+      setTimeout(() => bannerEl.classList.add('show'), 300);
+    }
+  }
+
+  function render() {
+    boardEl.innerHTML = '';
+    const solved = isSolved();
+    tiles.forEach((val, idx) => {
+      const div = document.createElement('div');
+      div.className = 'tile' + (val === 0 ? ' empty' : '') + (solved && val !== 0 ? ' solved' : '');
+      div.textContent = val === 0 ? '' : val;
+      div.addEventListener('click', () => clickTile(idx));
+      boardEl.appendChild(div);
+    });
+  }
+
+  function resetToSolved() {
+    bannerEl.classList.remove('show');
+    tiles = goalState();
+    moves = 0;
+    movesEl.textContent = '0';
+    clearInterval(timerInterval);
+    startTime = null;
+    running = false;
+    timerEl.textContent = '0:00';
+    render();
+  }
+
+  document.getElementById('btn-shuffle').addEventListener('click', newGame);
+  document.getElementById('btn-solve').addEventListener('click', resetToSolved);
+
+  // Keyboard support: arrow keys move the empty space
+  document.addEventListener('keydown', e => {
+    const emptyIdx = tiles.indexOf(0);
+    const eRow = Math.floor(emptyIdx / GRID);
+    const eCol = emptyIdx % GRID;
+    let targetIdx = -1;
+
+    if (e.key === 'ArrowUp'    && eRow < GRID - 1) targetIdx = emptyIdx + GRID;
+    if (e.key === 'ArrowDown'  && eRow > 0)        targetIdx = emptyIdx - GRID;
+    if (e.key === 'ArrowLeft'  && eCol < GRID - 1) targetIdx = emptyIdx + 1;
+    if (e.key === 'ArrowRight' && eCol > 0)        targetIdx = emptyIdx - 1;
+
+    if (targetIdx !== -1) {
+      e.preventDefault();
+      clickTile(targetIdx);
+    }
+  });
+
+  newGame();
+</script>
+</body>
+</html>
