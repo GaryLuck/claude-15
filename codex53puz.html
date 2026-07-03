@@ -168,9 +168,9 @@
           if (nums[i] > nums[j]) inversions++;
         }
       }
-      const emptyRowFromTop = Math.floor(arr.indexOf(0) / SIZE);
-      const emptyRowFromBottom = SIZE - emptyRowFromTop;
-      return emptyRowFromBottom % 2 === 1 ? inversions % 2 === 0 : inversions % 2 === 1;
+      const emptyRowIndex = Math.floor(arr.indexOf(0) / SIZE);
+      const emptyRowFromBottom = SIZE - emptyRowIndex;
+      return (emptyRowFromBottom + inversions) % 2 === 1;
     }
 
     function shuffleTiles() {
