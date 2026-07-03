@@ -142,7 +142,7 @@
   <script>
     const SIZE = 4;
     const TOTAL = SIZE * SIZE;
-    const SOLVED = Array.from({ length: TOTAL }, (_, i) => (i + 1) % TOTAL);
+    const SOLVED = Array.from({ length: TOTAL - 1 }, (_, i) => i + 1).concat(0);
 
     const board = document.getElementById("board");
     const movesEl = document.getElementById("moves");
@@ -170,7 +170,9 @@
       }
       const emptyRowIndex = Math.floor(arr.indexOf(0) / SIZE);
       const emptyRowFromBottom = SIZE - emptyRowIndex;
-      return (emptyRowFromBottom + inversions) % 2 === 1;
+      const emptyOnOddRowFromBottom = emptyRowFromBottom % 2 === 1;
+      const inversionsEven = inversions % 2 === 0;
+      return emptyOnOddRowFromBottom ? inversionsEven : !inversionsEven;
     }
 
     function shuffleTiles() {
@@ -267,10 +269,10 @@
       const col = emptyIndex % SIZE;
       let target = -1;
 
-      if (event.key === "ArrowUp" && row < SIZE - 1) target = emptyIndex + SIZE;
-      if (event.key === "ArrowDown" && row > 0) target = emptyIndex - SIZE;
-      if (event.key === "ArrowLeft" && col < SIZE - 1) target = emptyIndex + 1;
-      if (event.key === "ArrowRight" && col > 0) target = emptyIndex - 1;
+      if (event.key === "ArrowUp" && row > 0) target = emptyIndex - SIZE;
+      if (event.key === "ArrowDown" && row < SIZE - 1) target = emptyIndex + SIZE;
+      if (event.key === "ArrowLeft" && col > 0) target = emptyIndex - 1;
+      if (event.key === "ArrowRight" && col < SIZE - 1) target = emptyIndex + 1;
 
       if (target !== -1) {
         event.preventDefault();
