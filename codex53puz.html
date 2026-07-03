@@ -207,7 +207,7 @@
         const mins = Math.floor(elapsed / 60);
         const secs = elapsed % 60;
         timeEl.textContent = `${mins}:${String(secs).padStart(2, "0")}`;
-      }, 250);
+      }, 1000);
     }
 
     function draw() {
@@ -236,7 +236,9 @@
       const col = index % SIZE;
       const emptyRow = Math.floor(emptyIndex / SIZE);
       const emptyCol = emptyIndex % SIZE;
-      const adjacent = (Math.abs(row - emptyRow) === 1 && col === emptyCol) || (Math.abs(col - emptyCol) === 1 && row === emptyRow);
+      const adjacent =
+        (Math.abs(row - emptyRow) === 1 && col === emptyCol) ||
+        (Math.abs(col - emptyCol) === 1 && row === emptyRow);
       if (!adjacent) return;
 
       startTimer();
