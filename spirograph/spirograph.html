@@ -238,7 +238,12 @@
 
 <script>
 /* ── Utilities ─────────────────────────────────────────────────────── */
-function gcd(a, b) { a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { [a, b] = [b, a % b]; } return a || 1; }
+function gcd(a, b) {
+  a = Math.abs(Math.round(a));
+  b = Math.abs(Math.round(b));
+  while (b) { [a, b] = [b, a % b]; }
+  return a || 1;
+}
 function lcm(a, b) { return (a / gcd(a, b)) * b; }
 
 /* ── Curve generation ───────────────────────────────────────────────── */
@@ -255,10 +260,12 @@ function generatePoints(R, r, d, epi) {
   // For hypotrochoid r must be < R; clamp silently
   if (!epi && r >= R) r = R - 1;
 
-  // Number of rotations until curve closes = lcm(R,r)/r
+  // Number of rotations until curve closes = lcm(R,r)/r.
+  // rawSteps targets ~360 sample points per full rotation of the inner circle;
+  // the actual angular step size dt is (2π × rotations) / steps.
   const L = lcm(R, r);
   const rotations = L / r;
-  const rawSteps = Math.round(rotations * 360); // ~1° per inner rotation step
+  const rawSteps = Math.round(rotations * 360);
   const steps = Math.min(rawSteps, MAX_STEPS);
 
   const pts = [];
@@ -422,11 +429,13 @@ function startAnimation() {
 /* ── Save PNG ───────────────────────────────────────────────────────── */
 function savePNG() {
   canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
     const a   = document.createElement('a');
-    a.href    = URL.createObjectURL(blob);
+    a.href     = url;
     a.download = 'spirograph.png';
     a.click();
-    URL.revokeObjectURL(a.href);
+    // Revoke after a short delay to ensure the browser has started the download
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 }
 
@@ -445,6 +454,20 @@ wireSlider('sl-r',     'val-r',     true);
 wireSlider('sl-d',     'val-d',     true);
 wireSlider('sl-w',     'val-w',     true);
 wireSlider('sl-speed', 'val-speed', false); // speed doesn't need redraw
+
+// Keep r slider max in sync with R so r < R is always satisfied at the UI level.
+// This prevents the silent clamping inside generatePoints from ever being needed.
+function syncRSliderMax() {
+  const R   = +document.getElementById('sl-R').value;
+  const slR = document.getElementById('sl-r');
+  slR.max = R - 1;
+  if (+slR.value >= R) {
+    slR.value = R - 1;
+    document.getElementById('val-r').textContent = slR.value;
+  }
+}
+document.getElementById('sl-R').addEventListener('input', syncRSliderMax);
+syncRSliderMax(); // apply on load
 
 /* ── Wire colour ────────────────────────────────────────────────────── */
 document.getElementById('colour-pick').addEventListener('input', () => {
@@ -476,7 +499,11 @@ document.getElementById('btn-clear').addEventListener('click', () => { stopAnima
 document.getElementById('btn-save').addEventListener('click', savePNG);
 
 /* ── Responsive resize ──────────────────────────────────────────────── */
-const ro = new ResizeObserver(() => { resizeCanvas(); drawNow(); });
+let resizeTimer = null;
+const ro = new ResizeObserver(() => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { resizeCanvas(); drawNow(); }, 100);
+});
 ro.observe(document.getElementById('canvas-wrap'));
 
 /* ── Boot ───────────────────────────────────────────────────────────── */
