@@ -69,7 +69,7 @@
       cursor: pointer;
     }
 
-    /* colour picker */
+    /* color picker */
     input[type="color"] {
       width: 36px;
       height: 26px;
@@ -79,7 +79,7 @@
       padding: 0;
     }
 
-    /* preset colours */
+    /* preset colors */
     #presets {
       display: flex;
       gap: 5px;
@@ -195,11 +195,11 @@
     <input type="range" id="sl-speed" min="1" max="60" value="4" />
   </div>
 
-  <!-- colour + presets -->
+  <!-- color + presets -->
   <div class="ctrl-group" style="min-width:auto">
     <label style="justify-content:flex-start;gap:6px;">
-      Colour
-      <input type="color" id="colour-pick" value="#7aaeff" />
+      Color
+      <input type="color" id="color-pick" value="#7aaeff" />
     </label>
     <div id="presets">
       <button class="preset-btn active" data-color="#7aaeff" style="background:#7aaeff" title="Blue"></button>
@@ -306,7 +306,7 @@ function resizeCanvas() {
 /* ── Draw helpers ───────────────────────────────────────────────────── */
 function hsl(hue) { return `hsl(${hue},100%,65%)`; }
 
-function drawCurve(pts, colour, lineWidth, rainbow) {
+function drawCurve(pts, color, lineWidth, rainbow) {
   if (pts.length < 2) return;
   const cx = canvas.width  / 2;
   const cy = canvas.height / 2;
@@ -314,7 +314,7 @@ function drawCurve(pts, colour, lineWidth, rainbow) {
   ctx.lineWidth   = lineWidth;
   ctx.lineCap     = 'round';
   ctx.lineJoin    = 'round';
-  ctx.strokeStyle = colour;
+  ctx.strokeStyle = color;
 
   if (rainbow) {
     // Draw segment-by-segment with hue interpolation
@@ -359,7 +359,7 @@ function getParams() {
     d:       +document.getElementById('sl-d').value,
     lw:      +document.getElementById('sl-w').value,
     speed:   +document.getElementById('sl-speed').value,
-    colour:  document.getElementById('colour-pick').value,
+    color: document.getElementById('color-pick').value,
     rainbow: document.getElementById('chk-gradient').checked,
     layer:   document.getElementById('chk-layer').checked,
     epi:     document.getElementById('chk-epi').checked,
@@ -377,7 +377,7 @@ function drawNow() {
   const p = getParams();
   if (!p.layer) clearCanvas();
   const pts = generatePoints(p.R, p.r, p.d, p.epi);
-  drawCurve(pts, p.colour, p.lw, p.rainbow);
+  drawCurve(pts, p.color, p.lw, p.rainbow);
 }
 
 /* ── Animation draw ─────────────────────────────────────────────────── */
@@ -404,7 +404,7 @@ function startAnimation() {
       if (p.rainbow) {
         ctx.strokeStyle = hsl((i / total) * 360);
       } else {
-        ctx.strokeStyle = p.colour;
+        ctx.strokeStyle = p.color;
       }
       ctx.beginPath();
       ctx.moveTo(cx + animPts[i - 1].x, cy + animPts[i - 1].y);
@@ -469,19 +469,19 @@ function syncRSliderMax() {
 document.getElementById('sl-R').addEventListener('input', syncRSliderMax);
 syncRSliderMax(); // apply on load
 
-/* ── Wire colour ────────────────────────────────────────────────────── */
-document.getElementById('colour-pick').addEventListener('input', () => {
+/* ── Wire color ─────────────────────────────────────────────────────── */
+document.getElementById('color-pick').addEventListener('input', () => {
   // deactivate all presets
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   drawNow();
 });
 
-/* ── Preset colours ─────────────────────────────────────────────────── */
+/* ── Preset colors ──────────────────────────────────────────────────── */
 document.querySelectorAll('.preset-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('colour-pick').value = btn.dataset.color;
+    document.getElementById('color-pick').value = btn.dataset.color;
     drawNow();
   });
 });
